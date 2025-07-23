@@ -61,10 +61,7 @@ class ConsumeQueueCommand extends Command
 
         foreach ($filtered as $handler) {
             $consumer->consume($handler->queue(), function (AMQPMessage $message) use ($handler, $isRpc) {
-                $this->components->task("[{$handler->queue()}] Message received", function () use (
-                    $handler,
-                    $message, $isRpc
-                ) {
+                $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message, $isRpc) {
                     try {
                         $handler->handle($message);
 
@@ -74,8 +71,8 @@ class ConsumeQueueCommand extends Command
                             'correlation_id' => $props['correlation_id'] ?? null,
                             'reply_to' => $props['reply_to'] ?? null,
                         ]);
-
-                        if ($isRpc === true) {
+                        
+                        if ($isRpc || !array_key_exists('delivery_mode', $props)) {
                             $message->ack();
                         }
 
@@ -98,6 +95,7 @@ class ConsumeQueueCommand extends Command
 
         $this->components->info('RabbitMQ consumer stopped gracefully.');
     }
+
 
     protected function setupSignalHandling(): void
     {
