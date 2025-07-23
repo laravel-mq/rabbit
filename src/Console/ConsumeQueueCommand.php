@@ -65,9 +65,11 @@ class ConsumeQueueCommand extends Command
                     try {
                         $handler->handle($message);
 
+                        $props = $message->get_properties();
+
                         logger()->info("[RabbitMQ] Handled message from queue '{$handler->queue()}'", [
-                            'correlation_id' => $message->get('correlation_id'),
-                            'reply_to' => $message->get('reply_to'),
+                            'correlation_id' => $props['correlation_id'] ?? null,
+                            'reply_to' => $props['reply_to'] ?? null,
                         ]);
 
                         return true;
