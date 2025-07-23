@@ -71,10 +71,6 @@ class ConsumeQueueCommand extends Command
                             'correlation_id' => $props['correlation_id'] ?? null,
                             'reply_to' => $props['reply_to'] ?? null,
                         ]);
-                        
-                        if ($isRpc || !array_key_exists('delivery_mode', $props)) {
-                            $message->ack();
-                        }
 
                         return true;
                     } catch (Throwable $e) {
