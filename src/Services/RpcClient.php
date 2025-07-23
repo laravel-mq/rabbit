@@ -31,7 +31,7 @@ class RpcClient implements RpcClientInterface
     {
         $this->channel->queue_declare($replyQueue, false, true, false, false);
 
-        $correlationId = Str::uuid();
+        $correlationId = (string)Str::uuid();
         $response = null;
 
         $this->channel->basic_consume(
