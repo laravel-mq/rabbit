@@ -60,8 +60,11 @@ class ConsumeQueueCommand extends Command
         $isRpc = $this->option('mode') === 'rpc';
 
         foreach ($filtered as $handler) {
-            $consumer->consume($handler->queue(), function (AMQPMessage $message) use ($handler) {
-                $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message) {
+            $consumer->consume($handler->queue(), function (AMQPMessage $message) use ($handler, $isRpc) {
+                $this->components->task("[{$handler->queue()}] Message received", function () use (
+                    $handler,
+                    $message, $isRpc
+                ) {
                     try {
                         $handler->handle($message);
 
@@ -71,6 +74,10 @@ class ConsumeQueueCommand extends Command
                             'correlation_id' => $props['correlation_id'] ?? null,
                             'reply_to' => $props['reply_to'] ?? null,
                         ]);
+
+                        if ($isRpc === true) {
+                            $message->ack();
+                        }
 
                         return true;
                     } catch (Throwable $e) {
