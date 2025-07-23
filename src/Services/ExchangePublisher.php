@@ -1,19 +1,18 @@
 <?php
 
-namespace Starematic\RabbitMQ\Services;
+namespace LaravelMq\Rabbit\Services;
 
 use Exception;
 use JsonException;
-use PhpAmqpLib\Channel\AbstractChannel;
+use LaravelMq\Rabbit\Contracts\PublisherInterface;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
-class MessagePublisher
+class ExchangePublisher implements PublisherInterface
 {
     protected AMQPStreamConnection $connection;
-    
-    protected AbstractChannel|AMQPChannel $channel;
+    protected AMQPChannel $channel;
 
     /**
      * @throws Exception
@@ -27,16 +26,20 @@ class MessagePublisher
     /**
      * @throws JsonException
      */
-    public function publish(string $queue, array $payload): void
+    public function publish(string $queueOrExchange, array $payload, ?string $routingKey = null): void
     {
-        $this->channel->queue_declare($queue, false, true, false, false);
-
         $message = new AMQPMessage(json_encode($payload, JSON_THROW_ON_ERROR), [
             'content_type' => 'application/json',
             'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,
         ]);
 
-        $this->channel->basic_publish($message, '', $queue);
+        if ($routingKey !== null) {
+            $this->channel->exchange_declare($queueOrExchange, 'topic', false, true, false);
+            $this->channel->basic_publish($message, $queueOrExchange, $routingKey);
+        } else {
+            $this->channel->queue_declare($queueOrExchange, false, true, false, false);
+            $this->channel->basic_publish($message, '', $queueOrExchange);
+        }
     }
 
     /**

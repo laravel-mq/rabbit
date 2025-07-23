@@ -1,20 +1,22 @@
 <?php
 
-namespace Starematic\RabbitMQ;
+namespace LaravelMq\Rabbit;
 
 use Illuminate\Support\ServiceProvider;
-use Starematic\RabbitMQ\Console\ConsumeQueueCommand;
-use Starematic\RabbitMQ\Services\MessageConsumer;
-use Starematic\RabbitMQ\Services\MessagePublisher;
+use LaravelMq\Rabbit\Console\ConsumeQueueCommand;
+use LaravelMq\Rabbit\Consumer\Consumer;
+use LaravelMq\Rabbit\Contracts\PublisherInterface;
+use LaravelMq\Rabbit\Contracts\RpcClientInterface;
+use LaravelMq\Rabbit\Services\ExchangePublisher;
 
 class RabbitMQServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/config/rabbitmq.php', 'rabbitmq');
+        $this->mergeConfigFrom(__DIR__ . '/Config/rabbitmq.php', 'rabbitmq');
 
-        $this->app->singleton(MessagePublisher::class, function () {
-            return new MessagePublisher(
+        $this->app->singleton(PublisherInterface::class, function () {
+            return new ExchangePublisher(
                 config('rabbitmq.host'),
                 config('rabbitmq.port'),
                 config('rabbitmq.user'),
@@ -22,8 +24,17 @@ class RabbitMQServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(MessageConsumer::class, function () {
-            return new MessageConsumer(
+        $this->app->singleton(RpcClientInterface::class, function () {
+            return new RpcClient(
+                config('rabbitmq.host'),
+                config('rabbitmq.port'),
+                config('rabbitmq.user'),
+                config('rabbitmq.password')
+            );
+        });
+
+        $this->app->singleton(Consumer::class, function () {
+            return new Consumer(
                 config('rabbitmq.host'),
                 config('rabbitmq.port'),
                 config('rabbitmq.user'),
@@ -38,9 +49,10 @@ class RabbitMQServiceProvider extends ServiceProvider
             $this->commands([
                 ConsumeQueueCommand::class,
             ]);
+
+            $this->publishes([
+                __DIR__ . '/Config/rabbitmq.php' => config_path('rabbitmq.php'),
+            ], 'rabbitmq-config');
         }
-        $this->publishes([
-            __DIR__.'/Config/rabbitmq.php' => config_path('rabbitmq.php'),
-        ], 'rabbitmq-config');
     }
 }

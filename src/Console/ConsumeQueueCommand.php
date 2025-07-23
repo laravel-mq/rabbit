@@ -1,29 +1,37 @@
 <?php
 
-namespace Starematic\RabbitMQ\Console;
+namespace LaravelMq\Rabbit\Console;
 
 use Exception;
 use Illuminate\Console\Command;
-use Starematic\RabbitMQ\Contracts\QueueHandler;
-use Starematic\RabbitMQ\Services\MessageConsumer;
+use LaravelMq\Rabbit\Consumer\Consumer;
+use LaravelMq\Rabbit\Contracts\QueueHandler;
+use PhpAmqpLib\Message\AMQPMessage;
 use Throwable;
 
 class ConsumeQueueCommand extends Command
 {
-    protected $signature = 'rabbitmq:consume {--queue=}';
+    protected $signature = 'rabbitmq:consume
+    {--queue= : Comma-separated list of queues to consume}
+    {--mode=basic : Consumption mode cmd, rpc, event}';
 
     protected $description = 'Consume messages from a RabbitMQ queue';
 
+    protected bool $shouldStop = false;
+
     /**
+     * Handle queue consumption.
+     *
      * @throws Exception
      */
-    public function handle(MessageConsumer $consumer): void
+    public function handle(Consumer $consumer): void
     {
+        $this->setupSignalHandling();
+
         $handlers = app()->tagged(QueueHandler::class);
 
         if (empty($handlers)) {
             $this->components->error('No queue handlers found. Make sure your handlers are tagged and implement the QueueHandler interface.');
-
             return;
         }
 
@@ -37,7 +45,6 @@ class ConsumeQueueCommand extends Command
 
         if ($filtered->isEmpty()) {
             $this->components->error('No handlers matched the provided --queue option.');
-
             return;
         }
 
@@ -46,23 +53,57 @@ class ConsumeQueueCommand extends Command
         $this->newLine();
         $this->components->info('RabbitMQ consumer ready');
         $this->components->twoColumnDetail('Queues', '<fg=cyan>' . implode('</>, <fg=cyan>', $queues) . '</>');
+        $this->components->twoColumnDetail('Mode', $this->option('mode'));
         $this->components->twoColumnDetail('Started at', now()->toDateTimeString());
         $this->newLine();
 
+        $isRpc = $this->option('mode') === 'rpc';
+
         foreach ($filtered as $handler) {
-            $consumer->consume($handler->queue(), function ($payload) use ($handler) {
-                $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $payload) {
+            $consumer->consume($handler->queue(), function (AMQPMessage $message) use ($handler) {
+                $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message) {
                     try {
-                        $handler->handle($payload);
+                        $handler->handle($message);
+
+                        logger()->info("[RabbitMQ] Handled message from queue '{$handler->queue()}'", [
+                            'correlation_id' => $message->get('correlation_id'),
+                            'reply_to' => $message->get('reply_to'),
+                        ]);
+
                         return true;
                     } catch (Throwable $e) {
-                        report($e);
-                        return false;
+                        logger()->error("[RabbitMQ] Failed to handle message", [
+                            'queue' => $handler->queue(),
+                            'error' => $e->getMessage(),
+                        ]);
+
+                        throw new Exception($e->getMessage(), $e->getCode(), $e);
                     }
                 });
-            }, false);
+            }, $isRpc);
         }
 
-        $consumer->waitLoop();
+        while (!$this->shouldStop) {
+            $consumer->wait();
+        }
+
+        $this->components->info('RabbitMQ consumer stopped gracefully.');
+    }
+
+    protected function setupSignalHandling(): void
+    {
+        if (!extension_loaded('pcntl')) {
+            return;
+        }
+
+        pcntl_async_signals(true);
+
+        pcntl_signal(SIGTERM, function () {
+            $this->shouldStop = true;
+        });
+
+        pcntl_signal(SIGINT, function () {
+            $this->shouldStop = true;
+        });
     }
 }

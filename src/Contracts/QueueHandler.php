@@ -1,10 +1,12 @@
 <?php
 
-namespace Starematic\RabbitMQ\Contracts;
+namespace LaravelMq\Rabbit\Contracts;
+
+use PhpAmqpLib\Message\AMQPMessage;
 
 interface QueueHandler
 {
     public function queue(): string;
 
-    public function handle(array $payload): void;
+    public function handle(AMQPMessage $message): void;
 }

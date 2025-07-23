@@ -1,5 +1,5 @@
 {
-  "name": "starematic/laravel-rabbitmq",
+  "name": "laravelmq/rabbit",
   "description": "Reusable RabbitMQ integration using php-amqplib for Laravel apps.",
   "type": "library",
   "license": "MIT",
@@ -12,22 +12,18 @@
   }
   ,
   "require-dev": {
-    "roave/security-advisories": "dev-latest",
-    "laravel/pint": "^1.22"
+    "roave/security-advisories": "dev-latest"
   },
   "extra": {
     "laravel": {
       "providers": [
-        "Starematic\\RabbitMQ\\RabbitMQServiceProvider"
+        "LarvelMq\\Rabbit\\RabbitMQServiceProvider"
       ]
     }
   },
   "autoload": {
     "psr-4": {
-      "Starematic\\RabbitMQ\\": "src/"
+      "LaravelMq\\Rabbit\\": "src/"
     }
-  },
-  "scripts": {
-    "format": "pint"
   }
 }
