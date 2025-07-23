@@ -17,7 +17,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "LarvelMq\\Rabbit\\RabbitMQServiceProvider"
+        "LaravelMq\\Rabbit\\RabbitMQServiceProvider"
       ]
     }
   },
