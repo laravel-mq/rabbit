@@ -38,7 +38,7 @@ class RpcClient implements RpcClientInterface
             $replyQueue,
             '',
             false,
-            true,
+            false,
             false,
             false,
             function (AMQPMessage $message) use (&$response, $correlationId) {
