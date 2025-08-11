@@ -8,5 +8,7 @@ interface QueueHandler
 {
     public function queue(): string;
 
+    public function schemaPath(): ?string;
+
     public function handle(AMQPMessage $message): void;
 }
