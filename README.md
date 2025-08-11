@@ -46,7 +46,8 @@ class OrderController extends Controller
         $publisher->publish(
             'orders.exchange',
             ['order_id' => 123, 'status' => 'created'],
-            'order.created'
+            'order.created',
+            base_path('schemas/order.schema.json')
         );
     }
 }
