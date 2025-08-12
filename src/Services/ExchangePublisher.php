@@ -5,6 +5,7 @@ namespace LaravelMq\Rabbit\Services;
 use Exception;
 use JsonException;
 use LaravelMq\Rabbit\Contracts\PublisherInterface;
+use LaravelMq\Rabbit\Services\SchemaValidator;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -26,8 +27,13 @@ class ExchangePublisher implements PublisherInterface
     /**
      * @throws JsonException
      */
-    public function publish(string $queueOrExchange, array $payload, ?string $routingKey = null): void
+    public function publish(string $queueOrExchange, array $payload, ?string $routingKey = null, ?string $schemaPath = null): void
     {
+        if ($schemaPath !== null) {
+            $validator = new SchemaValidator();
+            $validator->validate($payload, $schemaPath);
+        }
+
         $message = new AMQPMessage(json_encode($payload, JSON_THROW_ON_ERROR), [
             'content_type' => 'application/json',
             'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT,

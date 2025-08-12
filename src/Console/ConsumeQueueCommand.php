@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Console\Command;
 use LaravelMq\Rabbit\Consumer\Consumer;
 use LaravelMq\Rabbit\Contracts\QueueHandler;
+use LaravelMq\Rabbit\Services\SchemaValidator;
 use PhpAmqpLib\Message\AMQPMessage;
 use Throwable;
 
@@ -63,6 +64,14 @@ class ConsumeQueueCommand extends Command
             $consumer->consume($handler->queue(), function (AMQPMessage $message) use ($handler, $isRpc) {
                 $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message, $isRpc) {
                     try {
+                        $schemaPath = $handler->schemaPath();
+                        if ($schemaPath !== null) {
+                            $payload = json_decode($message->getBody(), true, flags: JSON_THROW_ON_ERROR);
+                            
+                            $validator = new SchemaValidator();
+                            $validator->validate($payload, $schemaPath);
+                        }
+                        
                         $handler->handle($message);
 
                         $props = $message->get_properties();
