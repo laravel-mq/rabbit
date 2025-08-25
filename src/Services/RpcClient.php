@@ -5,10 +5,10 @@ namespace LaravelMq\Rabbit\Services;
 use Exception;
 use Illuminate\Support\Str;
 use JsonException;
-use LaravelMq\Rabbit\Contracts\RpcClientInterface;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use LaravelMq\Rabbit\Contracts\RpcClientInterface;
 
 class RpcClient implements RpcClientInterface
 {
@@ -30,6 +30,7 @@ class RpcClient implements RpcClientInterface
     public function call(string $queue, array $payload, string $replyQueue, int $timeout = 10): ?array
     {
         $this->channel->queue_declare($replyQueue, false, true, false, false);
+        $this->channel->queue_declare($queue, false, true, false, false);
 
         $correlationId = (string)Str::uuid();
         $response = null;
