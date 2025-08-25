@@ -5,7 +5,6 @@ namespace LaravelMq\Rabbit\Services;
 use Exception;
 use JsonException;
 use LaravelMq\Rabbit\Contracts\PublisherInterface;
-use LaravelMq\Rabbit\Services\SchemaValidator;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
