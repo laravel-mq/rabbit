@@ -36,10 +36,11 @@ class ConsumeQueueCommand extends Command
             return;
         }
 
-        $queueFilter = $this->option('queue');
-        $filtered = collect($handlers);
+        $selectedMode = $this->option('mode') ?? 'basic';
 
-        if ($queueFilter) {
+        $filtered = collect($handlers)->filter(fn($h) => $h->mode() === $selectedMode);
+
+        if ($queueFilter = $this->option('queue')) {
             $filterList = array_map('trim', explode(',', $queueFilter));
             $filtered = $filtered->filter(fn($h) => in_array($h->queue(), $filterList, true));
         }
@@ -58,7 +59,7 @@ class ConsumeQueueCommand extends Command
         $this->components->twoColumnDetail('Started at', now()->toDateTimeString());
         $this->newLine();
 
-        $isRpc = $this->option('mode') === 'rpc';
+        $isRpc = $selectedMode === 'rpc';
 
         foreach ($filtered as $handler) {
             $consumer->consume($handler->queue(), function (AMQPMessage $message) use ($handler, $isRpc) {

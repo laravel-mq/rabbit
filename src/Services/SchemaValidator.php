@@ -2,16 +2,16 @@
 
 namespace LaravelMq\Rabbit\Services;
 
+use JsonException;
 use JsonSchema\Constraints\Constraint;
-use stdClass;
 use JsonSchema\Validator;
 use LaravelMq\Rabbit\Exceptions\SchemaValidationException;
 use LaravelMq\Rabbit\Exceptions\SchemaFileException;
 
-class SchemaValidator
+readonly class SchemaValidator
 {
     public function __construct(
-        private readonly Validator $validator = new Validator()
+        private Validator $validator = new Validator()
     ) {}
 
     /**

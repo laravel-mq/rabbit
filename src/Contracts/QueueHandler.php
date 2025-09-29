@@ -11,4 +11,6 @@ interface QueueHandler
     public function schemaPath(): ?string;
 
     public function handle(AMQPMessage $message): void;
+
+    public function mode(): string;
 }

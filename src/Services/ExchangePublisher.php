@@ -5,6 +5,8 @@ namespace LaravelMq\Rabbit\Services;
 use Exception;
 use JsonException;
 use LaravelMq\Rabbit\Contracts\PublisherInterface;
+use LaravelMq\Rabbit\Exceptions\SchemaFileException;
+use LaravelMq\Rabbit\Exceptions\SchemaValidationException;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -24,7 +26,13 @@ class ExchangePublisher implements PublisherInterface
     }
 
     /**
+     * @param string $queueOrExchange
+     * @param array $payload
+     * @param string|null $routingKey
+     * @param string|null $schemaPath
      * @throws JsonException
+     * @throws SchemaFileException
+     * @throws SchemaValidationException
      */
     public function publish(string $queueOrExchange, array $payload, ?string $routingKey = null, ?string $schemaPath = null): void
     {
