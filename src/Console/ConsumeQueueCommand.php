@@ -4,11 +4,13 @@ namespace LaravelMq\Rabbit\Console;
 
 use Exception;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use LaravelMq\Rabbit\Consumer\Consumer;
 use LaravelMq\Rabbit\Contracts\QueueHandler;
 use LaravelMq\Rabbit\Services\SchemaValidator;
 use PhpAmqpLib\Message\AMQPMessage;
 use Throwable;
+use Illuminate\Support\Facades\App;
 
 class ConsumeQueueCommand extends Command
 {
@@ -29,7 +31,7 @@ class ConsumeQueueCommand extends Command
     {
         $this->setupSignalHandling();
 
-        $handlers = app()->tagged(QueueHandler::class);
+        $handlers = App::make('app')->tagged(QueueHandler::class);
 
         if (empty($handlers)) {
             $this->components->error('No queue handlers found. Make sure your handlers are tagged and implement the QueueHandler interface.');
@@ -77,7 +79,7 @@ class ConsumeQueueCommand extends Command
 
                         $props = $message->get_properties();
 
-                        logger()->info("[RabbitMQ] Handled message from queue '{$handler->queue()}'", [
+                        Log::info("[RabbitMQ] Handled message from queue '{$handler->queue()}'", [
                             'correlation_id' => $props['correlation_id'] ?? null,
                             'reply_to' => $props['reply_to'] ?? null,
                         ]);
@@ -88,7 +90,7 @@ class ConsumeQueueCommand extends Command
 
                         return true;
                     } catch (Throwable $e) {
-                        logger()->error("[RabbitMQ] Failed to handle message", [
+                        Log::error("[RabbitMQ] Failed to handle message", [
                             'queue' => $handler->queue(),
                             'error' => $e->getMessage(),
                         ]);

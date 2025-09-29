@@ -2,6 +2,7 @@
 
 namespace LaravelMq\Rabbit;
 
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 use LaravelMq\Rabbit\Console\ConsumeQueueCommand;
 use LaravelMq\Rabbit\Consumer\Consumer;
@@ -17,7 +18,7 @@ class RabbitMQServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/Config/rabbitmq.php', 'rabbitmq');
 
         $this->app->singleton(PublisherInterface::class, function () {
-            $config = config('rabbitmq');
+            $config = Config::get('rabbitmq');
 
             return new ExchangePublisher(
                 $config['host'],
@@ -28,7 +29,7 @@ class RabbitMQServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(RpcClientInterface::class, function () {
-            $config = config('rabbitmq');
+            $config = Config::get('rabbitmq');
 
             return new RpcClient(
                 $config['host'],
@@ -39,7 +40,7 @@ class RabbitMQServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(Consumer::class, function () {
-            $config = config('rabbitmq');
+            $config = Config::get('rabbitmq');
 
             return new Consumer(
                 $config['host'],
@@ -61,7 +62,7 @@ class RabbitMQServiceProvider extends ServiceProvider
             ]);
 
             $this->publishes([
-                __DIR__ . '/Config/rabbitmq.php' => config_path('rabbitmq.php'),
+                __DIR__ . '/Config/rabbitmq.php' => $this->app->configPath('rabbitmq.php'),
             ], 'rabbitmq-config');
         }
     }

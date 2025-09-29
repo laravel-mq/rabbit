@@ -3,6 +3,7 @@
 namespace LaravelMq\Rabbit\Services;
 
 use Exception;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use JsonException;
 use PhpAmqpLib\Channel\AMQPChannel;
@@ -46,7 +47,7 @@ class RpcClient implements RpcClientInterface
                 if ($message->get('correlation_id') === $correlationId) {
                     $response = json_decode($message->getBody(), true, 512, JSON_THROW_ON_ERROR);
                 }
-                logger()->info('Received reply message', [
+                Log::info('Received reply message', [
                     'correlation_id' => $message->get('correlation_id'),
                     'match' => $message->get('correlation_id') === $correlationId,
                     'body' => $message->getBody(),
