@@ -83,6 +83,11 @@ class OrderCreatedHandler implements QueueHandler
         
         Order::create($payload);
     }
+    
+    public function mode(): string
+    {
+        return 'rpc';
+    }
 }
 ```
 
