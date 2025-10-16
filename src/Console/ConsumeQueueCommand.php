@@ -84,7 +84,7 @@ class ConsumeQueueCommand extends Command
                             'reply_to' => $props['reply_to'] ?? null,
                         ]);
 
-                        $message->ack();
+//                        $message->ack();
 
                         return true;
                     } catch (Throwable $e) {
