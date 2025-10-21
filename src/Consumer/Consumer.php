@@ -23,13 +23,21 @@ class Consumer
     /**
      * Register a single handler’s callback to a queue.
      */
-    public function consume(string $queue, callable $callback, bool $isRpc = false, string $mode = 'basic', ?string $routingKey = null): void
-    {
+    public function consume(
+        string $queue,
+        callable $callback,
+        bool $isRpc = false,
+        string $mode = 'basic',
+        ?string $routingKey = null
+    ): void {
         if ($mode === 'event') {
             $this->channel->exchange_declare('events', 'topic', true, false, false);
+
             $this->channel->queue_declare($queue, false, true, false, false);
 
-            $routingKey = $routingKey ?: $queue;
+            if (empty($routingKey)) {
+                throw new Exception("Missing routing key for event queue: {$queue}");
+            }
 
             $this->channel->queue_bind($queue, 'events', $routingKey);
 
@@ -37,7 +45,7 @@ class Consumer
                 $queue,
                 '',
                 false,
-                true,
+                true, // auto-ack
                 false,
                 false,
                 $callback
@@ -46,6 +54,7 @@ class Consumer
         }
 
         $this->channel->queue_declare($queue, false, true, false, false);
+
         $this->channel->basic_consume(
             $queue,
             '',
