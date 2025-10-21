@@ -64,41 +64,50 @@ class ConsumeQueueCommand extends Command
         $isRpc = $selectedMode === 'rpc';
 
         foreach ($filtered as $handler) {
-            $consumer->consume($handler->queue(), function (AMQPMessage $message) use ($handler, $isRpc) {
-                $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message, $isRpc) {
-                    try {
-                        $schemaPath = $handler->schemaPath();
-                        if ($schemaPath !== null) {
-                            $payload = json_decode($message->getBody(), true, flags: JSON_THROW_ON_ERROR);
-                            
-                            $validator = new SchemaValidator();
-                            $validator->validate($payload, $schemaPath);
+            $queueName = $handler->queue();
+            $routingKey = method_exists($handler, 'routingKey') ? $handler->routingKey() : null;
+
+            $consumer->consume(
+                $queueName,
+                function (AMQPMessage $message) use ($handler, $isRpc) {
+                    $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message, $isRpc) {
+                        try {
+                            $schemaPath = $handler->schemaPath();
+                            if ($schemaPath !== null) {
+                                $payload = json_decode($message->getBody(), true, flags: JSON_THROW_ON_ERROR);
+
+                                $validator = new SchemaValidator();
+                                $validator->validate($payload, $schemaPath);
+                            }
+
+                            $handler->handle($message);
+
+                            $props = $message->get_properties();
+
+                            Log::info("[RabbitMQ] Handled message from queue '{$handler->queue()}'", [
+                                'correlation_id' => $props['correlation_id'] ?? null,
+                                'reply_to' => $props['reply_to'] ?? null,
+                            ]);
+
+                            if ($isRpc) {
+                                $message->ack();
+                            }
+
+                            return true;
+                        } catch (Throwable $e) {
+                            Log::error("[RabbitMQ] Failed to handle message", [
+                                'queue' => $handler->queue(),
+                                'error' => $e->getMessage(),
+                            ]);
+
+                            throw new Exception($e->getMessage(), $e->getCode(), $e);
                         }
-                        
-                        $handler->handle($message);
-
-                        $props = $message->get_properties();
-
-                        Log::info("[RabbitMQ] Handled message from queue '{$handler->queue()}'", [
-                            'correlation_id' => $props['correlation_id'] ?? null,
-                            'reply_to' => $props['reply_to'] ?? null,
-                        ]);
-
-                        if ($isRpc) {
-                            $message->ack();
-                        }
-
-                        return true;
-                    } catch (Throwable $e) {
-                        Log::error("[RabbitMQ] Failed to handle message", [
-                            'queue' => $handler->queue(),
-                            'error' => $e->getMessage(),
-                        ]);
-
-                        throw new Exception($e->getMessage(), $e->getCode(), $e);
-                    }
-                });
-            }, $isRpc);
+                    });
+                },
+                $isRpc,
+                $selectedMode,
+                $routingKey
+            );
         }
 
         while (!$this->shouldStop) {

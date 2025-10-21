@@ -23,10 +23,29 @@ class Consumer
     /**
      * Register a single handler’s callback to a queue.
      */
-    public function consume(string $queue, callable $callback, bool $isRpc = false): void
+    public function consume(string $queue, callable $callback, bool $isRpc = false, string $mode = 'basic', ?string $routingKey = null): void
     {
-        $this->channel->queue_declare($queue, false, true, false, false);
+        if ($mode === 'event') {
+            $this->channel->exchange_declare('events', 'topic', true, false, false);
+            $this->channel->queue_declare($queue, false, true, false, false);
 
+            $routingKey = $routingKey ?: $queue;
+
+            $this->channel->queue_bind($queue, 'events', $routingKey);
+
+            $this->channel->basic_consume(
+                $queue,
+                '',
+                false,
+                true,
+                false,
+                false,
+                $callback
+            );
+            return;
+        }
+
+        $this->channel->queue_declare($queue, false, true, false, false);
         $this->channel->basic_consume(
             $queue,
             '',
