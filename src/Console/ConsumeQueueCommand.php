@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use LaravelMq\Rabbit\Consumer\Consumer;
+use LaravelMq\Rabbit\Contracts\EventQueueHandler;
 use LaravelMq\Rabbit\Contracts\QueueHandler;
 use LaravelMq\Rabbit\Services\SchemaValidator;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -65,8 +66,7 @@ class ConsumeQueueCommand extends Command
 
         foreach ($filtered as $handler) {
             $queueName = $handler->queue();
-            $routingKey = method_exists($handler, 'routingKey') ? $handler->routingKey() : null;
-
+            $routingKey = $handler instanceof EventQueueHandler ? $handler->routingKey() : null;
             $consumer->consume(
                 $queueName,
                 function (AMQPMessage $message) use ($handler, $isRpc) {

@@ -13,6 +13,4 @@ interface QueueHandler
     public function mode(): string;
 
     public function schemaPath(): ?string;
-
-    public function routingKey(): ?string;
 }
