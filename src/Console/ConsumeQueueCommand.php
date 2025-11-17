@@ -114,6 +114,7 @@ class ConsumeQueueCommand extends Command
             $consumer->wait();
         }
 
+        $consumer->close();
         $this->components->info('RabbitMQ consumer stopped gracefully.');
     }
 

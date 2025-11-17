@@ -85,4 +85,18 @@ class Consumer
         $this->connection->close();
     }
 
+    /**
+     * @throws Exception
+     */
+    public function close(): void
+    {
+        if ($this->channel->is_open()) {
+            $this->channel->close();
+        }
+
+        if ($this->connection->isConnected()) {
+            $this->connection->close();
+        }
+    }
+
 }
