@@ -98,9 +98,14 @@ class ConsumeQueueCommand extends Command
                             Log::error("[RabbitMQ] Failed to handle message", [
                                 'queue' => $handler->queue(),
                                 'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString(),
                             ]);
 
-                            throw new Exception($e->getMessage(), $e->getCode(), $e);
+                            if ($isRpc) {
+                                $message->nack(false, true);
+                            }
+
+                            return false;
                         }
                     });
                 },
