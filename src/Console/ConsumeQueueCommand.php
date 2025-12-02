@@ -111,7 +111,14 @@ class ConsumeQueueCommand extends Command
         }
 
         while (!$this->shouldStop) {
-            $consumer->wait();
+            if (function_exists('pcntl_signal_dispatch')) {
+                pcntl_signal_dispatch();
+            }
+            try {
+                $consumer->wait();
+            } catch (\Throwable $e) {
+                Log::error("[RabbitMQ] Top-level consumer loop error: {$e->getMessage()}");
+            }
         }
 
         $consumer->close();
