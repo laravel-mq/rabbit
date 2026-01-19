@@ -37,6 +37,7 @@ class Consumer
 
     /**
      * Create RMQ connection with good defaults for long-running workers.
+     * @throws Exception
      */
     private function connect(): void
     {
@@ -98,19 +99,23 @@ class Consumer
         callable $callback,
         bool $isRpc = false,
         string $mode = 'basic',
-        ?string $routingKey = null
+        ?string $routingKey = null,
+        ?string $exchange = null
     ): void {
         $this->registeredConsumers[] = [$queue, $callback, $isRpc, $mode, $routingKey];
 
         if ($mode === 'event') {
-            $this->channel->exchange_declare('events', 'topic', true, false, false);
+            if (!$exchange) {
+                throw new Exception("Missing exchange for event queue: {$queue}");
+            }
+            $this->channel->exchange_declare($exchange, 'topic', true, false, false);
             $this->channel->queue_declare($queue, false, true, false, false);
 
             if (!$routingKey) {
                 throw new Exception("Missing routing key for event queue: {$queue}");
             }
 
-            $this->channel->queue_bind($queue, 'events', $routingKey);
+            $this->channel->queue_bind($queue, $exchange, $routingKey);
 
             $this->channel->basic_consume(
                 $queue,

@@ -67,6 +67,7 @@ class ConsumeQueueCommand extends Command
         foreach ($filtered as $handler) {
             $queueName = $handler->queue();
             $routingKey = $handler instanceof EventQueueHandler ? $handler->routingKey() : null;
+            $exchange = $handler instanceof EventQueueHandler ? $handler->exchange() : null;
             $consumer->consume(
                 $queueName,
                 function (AMQPMessage $message) use ($handler, $isRpc) {
@@ -111,7 +112,8 @@ class ConsumeQueueCommand extends Command
                 },
                 $isRpc,
                 $selectedMode,
-                $routingKey
+                $routingKey,
+                $exchange
             );
         }
 
