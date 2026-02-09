@@ -57,7 +57,7 @@ class Consumer
             30,
             null,
             true,
-            60
+            0
         );
 
         $this->channel = $this->connection->channel();
