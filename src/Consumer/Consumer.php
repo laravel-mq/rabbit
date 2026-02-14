@@ -74,11 +74,14 @@ class Consumer
         sleep(2);
 
         try {
+            $consumersToRestore = $this->registeredConsumers;
+            $this->registeredConsumers = [];
+            
             $this->connect();
 
-            foreach ($this->registeredConsumers as $consumer) {
-                [$queue, $callback, $isRpc, $mode, $routingKey] = $consumer;
-                $this->consume($queue, $callback, $isRpc, $mode, $routingKey);
+            foreach ($consumersToRestore as $consumer) {
+                [$queue, $callback, $isRpc, $mode, $routingKey, $exchange] = $consumer;
+                $this->consume($queue, $callback, $isRpc, $mode, $routingKey, $exchange);
             }
 
             Log::info("[RabbitMQ] Reconnected + consumers restored.");
@@ -102,7 +105,7 @@ class Consumer
         ?string $routingKey = null,
         ?string $exchange = null
     ): void {
-        $this->registeredConsumers[] = [$queue, $callback, $isRpc, $mode, $routingKey];
+        $this->registeredConsumers[] = [$queue, $callback, $isRpc, $mode, $routingKey, $exchange];
 
         if ($mode === 'event') {
             if (!$exchange) {
