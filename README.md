@@ -6,7 +6,7 @@ A simple and lightweight RabbitMQ integration package for Laravel applications. 
 
 This package gives you:
 - **Message Publishing**: Send messages to RabbitMQ exchanges with routing keys
-- **Queue Consumption**: Consume messages from queues with automatic acknowledgment
+- **Queue Consumption**: Consume messages from queues with manual acknowledgment (prefetch 1, at-least-once delivery)
 - **RPC Support**: Handle request-response patterns
 - **Schema Validation**: Validate message payloads against JSON schemas
 - **Console Commands**: Easy-to-use Artisan commands for consuming queues
@@ -102,3 +102,16 @@ php artisan rabbitmq:consume --queue=orders.queue,notifications.queue
 
 php artisan rabbitmq:consume --mode=rpc
 ```
+
+### Delivery guarantees
+
+The consumer uses **manual acknowledgements with a prefetch of 1** for every mode (`basic`, `event`, `rpc`):
+
+- The broker sends a worker one message at a time. The next one is delivered only after the current one is acked or nacked.
+- A message is **acked after `handle()` returns** without throwing.
+- If schema validation fails or `handle()` throws, the message is **nacked without requeue**. RabbitMQ dead-letters it if the queue has a dead-letter exchange; otherwise the message is dropped. Failed messages are never requeued, so a poison message cannot loop forever.
+- If the connection drops while a handler is running, the ack can't be sent. The worker logs a warning and reconnects, and RabbitMQ **redelivers** the unacked message (`$message->isRedelivered()` is `true`).
+
+Delivery is therefore **at-least-once**: a message can be handled more than once (for example, when the handler finished but the connection dropped before the ack). **Handlers must be idempotent.** Do not call `$message->ack()`, `nack()` or `reject()` from a handler; the consumer does this for you.
+
+After a reconnect, every queue is re-subscribed exactly once, including event queues with their exchange and routing key.

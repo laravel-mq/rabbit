@@ -9,6 +9,7 @@ use LaravelMq\Rabbit\Consumer\Consumer;
 use LaravelMq\Rabbit\Contracts\EventQueueHandler;
 use LaravelMq\Rabbit\Contracts\QueueHandler;
 use LaravelMq\Rabbit\Services\SchemaValidator;
+use PhpAmqpLib\Exception\AMQPExceptionInterface;
 use PhpAmqpLib\Message\AMQPMessage;
 use Throwable;
 use Illuminate\Support\Facades\App;
@@ -70,8 +71,8 @@ class ConsumeQueueCommand extends Command
             $exchange = $handler instanceof EventQueueHandler ? $handler->exchange() : null;
             $consumer->consume(
                 $queueName,
-                function (AMQPMessage $message) use ($handler, $isRpc) {
-                    $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message, $isRpc) {
+                function (AMQPMessage $message) use ($handler) {
+                    $this->components->task("[{$handler->queue()}] Message received", function () use ($handler, $message) {
                         try {
                             $schemaPath = $handler->schemaPath();
                             if ($schemaPath !== null) {
@@ -90,11 +91,7 @@ class ConsumeQueueCommand extends Command
                                 'reply_to' => $props['reply_to'] ?? null,
                             ]);
 
-                            if ($isRpc) {
-                                $message->ack();
-                            }
-
-                            return true;
+                            $handled = true;
                         } catch (Throwable $e) {
                             Log::error("[RabbitMQ] Failed to handle message", [
                                 'queue' => $handler->queue(),
@@ -102,12 +99,12 @@ class ConsumeQueueCommand extends Command
                                 'trace' => $e->getTraceAsString(),
                             ]);
 
-                            if ($isRpc) {
-                                $message->nack(false, true);
-                            }
-
-                            return false;
+                            $handled = false;
                         }
+
+                        $this->settle($message, $handler->queue(), $handled);
+
+                        return $handled;
                     });
                 },
                 $isRpc,
@@ -132,6 +129,30 @@ class ConsumeQueueCommand extends Command
         $this->components->info('RabbitMQ consumer stopped gracefully.');
     }
 
+
+    /**
+     * Ack a handled message, or nack a failed one without requeue (it is
+     * dead-lettered if the queue has a DLX, otherwise dropped). If the
+     * channel it arrived on is already gone, the broker has requeued the
+     * message itself and will redeliver it, so only log and let the
+     * consumer reconnect.
+     */
+    protected function settle(AMQPMessage $message, string $queue, bool $handled): void
+    {
+        try {
+            if ($handled) {
+                $message->ack();
+            } else {
+                $message->nack(false, false);
+            }
+        } catch (AMQPExceptionInterface $e) {
+            Log::warning("[RabbitMQ] Could not " . ($handled ? 'ack' : 'nack') . " message, channel is closed; broker will redeliver it", [
+                'queue' => $queue,
+                'delivery_tag' => $message->getDeliveryTag(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 
     protected function setupSignalHandling(): void
     {
